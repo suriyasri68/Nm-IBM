@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HabitVerse Ultimate</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Segoe UI",sans-serif;}
+
+/* LOGIN BACKGROUND */
+.background{
+position:fixed;width:100%;height:100%;
+background:linear-gradient(135deg,#2ecc71,#27ae60,#2980b9);
+overflow:hidden;
+}
+
+/* Floating habit icons */
+.icon{
+position:absolute;font-size:40px;opacity:0.2;
+animation:float 20s linear infinite;
+}
+@keyframes float{
+from{transform:translateY(100vh) rotate(0deg);}
+to{transform:translateY(-120vh) rotate(360deg);}
+}
+
+/* Login box */
+.login-box{
+position:absolute;top:50%;left:50%;
+transform:translate(-50%,-50%);
+background:rgba(255,255,255,0.18);
+backdrop-filter:blur(12px);
+padding:35px 30px;border-radius:18px;
+width:320px;text-align:center;
+box-shadow:0 0 30px rgba(0,0,0,0.4);
+color:white;
+}
+.login-box input{
+width:100%;padding:12px;border:none;
+border-radius:10px;margin-bottom:15px;
+}
+.login-box button{
+width:100%;padding:12px;border:none;
+border-radius:10px;background:#ff9800;
+color:white;font-size:16px;cursor:pointer;
+}
+
+/* APP PAGE */
+#appPage{
+display:none;min-height:100vh;
+background:linear-gradient(to right,#141e30,#243b55);
+color:white;padding:20px;
+}
+
+.top-bar{
+display:flex;justify-content:space-between;
+align-items:center;margin-bottom:15px;
+}
+.controls{
+display:grid;grid-template-columns:1fr 1fr auto;
+gap:10px;margin-bottom:15px;
+}
+.controls input,.controls select,.controls button{
+padding:10px;border-radius:8px;border:none;
+}
+.controls button{
+background:#ff9800;color:white;cursor:pointer;
+}
+.card{
+background:rgba(255,255,255,0.15);
+padding:15px;border-radius:15px;margin-bottom:15px;
+}
+.stats{
+display:grid;grid-template-columns:1fr 1fr;gap:15px;
+}
+.day{
+width:32px;height:32px;display:inline-flex;
+align-items:center;justify-content:center;
+margin:3px;border-radius:6px;font-size:12px;
+cursor:pointer;
+}
+.happy{background:#4caf50;}
+.normal{background:#ffc107;}
+.sad{background:#f44336;}
+progress{width:100%;}
+.logout{
+background:red;border:none;padding:8px 12px;
+border-radius:8px;color:white;cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN PAGE -->
+<div class="background" id="loginPage">
+<div class="icon" style="left:10%;animation-duration:18s;">🏃‍♂️</div>
+<div class="icon" style="left:25%;animation-duration:22s;">📚</div>
+<div class="icon" style="left:40%;animation-duration:15s;">💧</div>
+<div class="icon" style="left:55%;animation-duration:25s;">🧘‍♀️</div>
+<div class="icon" style="left:70%;animation-duration:20s;">⏰</div>
+<div class="icon" style="left:85%;animation-duration:30s;">🔥</div>
+
+<div class="login-box">
+<h1>🌱 HabitVerse</h1>
+<p>Build daily habits. Change your life.</p>
+<input type="text" id="username" placeholder="Enter your name">
+<button onclick="login()">Enter</button>
+</div>
+</div>
+
+<!-- APP PAGE -->
+<div id="appPage">
+
+<div class="top-bar">
+<h2>Welcome, <span id="userDisplay"></span></h2>
+<button class="logout" onclick="logout()">Logout</button>
+</div>
+
+<div class="controls card">
+<input type="text" id="habitInput" placeholder="Enter habit">
+<select id="mood">
+<option value="happy">😄 Happy</option>
+<option value="normal">😐 Normal</option>
+<option value="sad">😢 Sad</option>
+</select>
+<button onclick="addHabit()">Add</button>
+</div>
+
+<div class="stats">
+<div class="card">
+<h3>🔥 Streak</h3>
+<p><span id="streak">0</span> days</p>
+<h3>🎮 Level</h3>
+<p><span id="level">1</span></p>
+<progress id="xpBar" value="0" max="100"></progress>
+</div>
+
+<div class="card">
+<h3>🤖 AI Coach</h3>
+<p id="aiMessage"></p>
+</div>
+</div>
+
+<div class="card">
+<h3>🏆 Achievements</h3>
+<div id="badges"></div>
+</div>
+
+<div class="card">
+<h3>📋 Habits</h3>
+<div id="habits"></div>
+</div>
+
+<div class="card">
+<h3>🎨 Calendar</h3>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+<button onclick="changeMonth(-1)">⬅</button>
+<h4 id="calendarTitle"></h4>
+<button onclick="changeMonth(1)">➡</button>
+</div>
+<div id="calendar"></div>
+</div>
+
+<div class="card">
+<h3>📊 Mood Progress</h3>
+<canvas id="chart"></canvas>
+</div>
+
+<div class="card">
+<h3>📅 Previous Month Report</h3>
+<div id="lastMonthReport"></div>
+</div>
+
+</div>
+
+<script>
+let currentUser=localStorage.getItem("user");
+let habits=[];
+let days={};
+let xp=0;
+let levelValue=1;
+let lastMonthData={};
+
+let selectedMonth=new Date().getMonth();
+let selectedYear=new Date().getFullYear();
+
+function login(){
+let name=username.value.trim();
+if(!name)return alert("Enter name");
+localStorage.setItem("user",name);
+currentUser=name;
+loadUserData();
+showApp();
+}
+
+function logout(){
+localStorage.removeItem("user");
+location.reload();
+}
+
+function loadUserData(){
+habits=JSON.parse(localStorage.getItem(currentUser+"_habits"))||[];
+days=JSON.parse(localStorage.getItem(currentUser+"_days"))||{};
+xp=Number(localStorage.getItem(currentUser+"_xp"))||0;
+levelValue=Number(localStorage.getItem(currentUser+"_level"))||1;
+lastMonthData=JSON.parse(localStorage.getItem(currentUser+"_lastMonth"))||{};
+}
+
+function saveData(){
+localStorage.setItem(currentUser+"_habits",JSON.stringify(habits));
+localStorage.setItem(currentUser+"_days",JSON.stringify(days));
+localStorage.setItem(currentUser+"_xp",xp);
+localStorage.setItem(currentUser+"_level",levelValue);
+localStorage.setItem(currentUser+"_lastMonth",JSON.stringify(lastMonthData));
+}
+
+if(currentUser){
+loadUserData();
+showApp();
+}
+
+function showApp(){
+loginPage.style.display="none";
+appPage.style.display="block";
+userDisplay.innerText=currentUser;
+display();
+}
+
+function addHabit(){
+let habit=habitInput.value.trim();
+let mood=document.getElementById("mood").value;
+if(!habit)return alert("Enter habit");
+habits.push({name:habit,mood:mood});
+let today=new Date().getDate();
+days[today]=mood;
+xp+=10;if(xp>=100){levelValue++;xp=0;}
+saveData();
+display();
+habitInput.value="";
+}
+
+function removeHabit(i){
+habits.splice(i,1);
+saveData();
+display();
+}
+
+function calculateStreak(){
+let s=0,t=new Date().getDate();
+for(let i=t;i>0;i--){
+if(days[i])s++;
+else break;
+}
+return s;
+}
+
+function display(){
+document.getElementById("habits").innerHTML=
+habits.map((item,i)=>`
+<div class="card">🔥 ${item.name} | ${item.mood}
+<button onclick="removeHabit(${i})"
+style="float:right;background:red;border:none;padding:5px 8px;border-radius:6px;color:white;">❌</button>
+</div>`).join("");
+
+streak.innerText=calculateStreak();
+level.innerText=levelValue;
+xpBar.value=xp;
+
+renderCalendar();
+aiCoach();
+updateChart();
+checkBadges();
+displayLastMonthReport();
+}
+
+function changeMonth(dir){
+selectedMonth+=dir;
+if(selectedMonth<0){selectedMonth=11;selectedYear--;}
+if(selectedMonth>11){selectedMonth=0;selectedYear++;}
+renderCalendar();
+}
+
+function renderCalendar(){
+let calendar=document.getElementById("calendar");
+calendar.innerHTML="";
+let firstDay=new Date(selectedYear,selectedMonth,1).getDay();
+let totalDays=new Date(selectedYear,selectedMonth+1,0).getDate();
+let monthName=new Date(selectedYear,selectedMonth)
+.toLocaleString('default',{month:'long'});
+calendarTitle.innerText=monthName+" "+selectedYear;
+
+for(let i=0;i<firstDay;i++){
+let e=document.createElement("div");
+e.className="day";e.style.visibility="hidden";
+calendar.appendChild(e);
+}
+for(let i=1;i<=totalDays;i++){
+let d=document.createElement("div");
+d.className="day";d.innerText=i;
+if(days[i])d.classList.add(days[i]);
+calendar.appendChild(d);
+}
+}
+
+function aiCoach(){
+let moods=Object.values(days);
+aiMessage.innerText=
+moods.includes("sad")?"Tomorrow is a fresh start 💪":
+moods.includes("happy")?"Your habits bring happiness 🌟":
+"Stay consistent 🚀";
+}
+
+/* FIXED MOOD CHART */
+function updateChart(){
+let happy=0, normal=0, sad=0;
+habits.forEach(h=>{
+if(h.mood==="happy") happy++;
+if(h.mood==="normal") normal++;
+if(h.mood==="sad") sad++;
+});
+let ctx=document.getElementById("chart").getContext("2d");
+if(window.myChart) window.myChart.destroy();
+window.myChart=new Chart(ctx,{
+type:"doughnut",
+data:{
+labels:["Happy","Normal","Sad"],
+datasets:[{data:[happy,normal,sad],
+backgroundColor:["green","yellow","red"]}]
+}
+});
+}
+
+function checkBadges(){
+let b=document.getElementById("badges");
+b.innerHTML="";
+let streakVal=calculateStreak();
+if(streakVal>=3)b.innerHTML+="<p>🔥 3-Day Streak</p>";
+if(streakVal>=7)b.innerHTML+="<p>💎 7-Day Master</p>";
+if(habits.length>=5)b.innerHTML+="<p>🚀 5 Habits Creator</p>";
+if(levelValue>=5)b.innerHTML+="<p>👑 Level 5 Achiever</p>";
+if(b.innerHTML==="")b.innerHTML="<p>No badges yet 💪</p>";
+}
+
+function displayLastMonthReport(){
+let c=document.getElementById("lastMonthReport");
+if(!lastMonthData.month){
+c.innerHTML="<p>No previous month data yet.</p>";
+return;
+}
+c.innerHTML=`
+<p><strong>Month:</strong> ${lastMonthData.month}</p>
+<p>Total Habits: ${lastMonthData.totalHabits}</p>
+<p>😄 Happy: ${lastMonthData.happy}</p>
+<p>😐 Normal: ${lastMonthData.normal}</p>
+<p>😢 Sad: ${lastMonthData.sad}</p>
+<p>🔥 Best Streak: ${lastMonthData.bestStreak} days</p>`;
+}
+</script>
+
+</body>
+</html>
